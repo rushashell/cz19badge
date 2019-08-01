@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3cb944f0-94f9-4380-8114-af324679f8b6}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>__init__.py</StartupFile>
+    <StartupFile>packman\__init__.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -19,10 +19,12 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="packman\gameservice.py" />
-    <Compile Include="packman\hello.py" />
+    <Compile Include="packman\gameservices.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
+    <Compile Include="packman\tetrisgameservices.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tetris\__init__.py">
       <SubType>Code</SubType>
     </Compile>
