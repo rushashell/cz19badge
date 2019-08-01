@@ -23,9 +23,22 @@
     <Compile Include="packman\hello.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
+    <Compile Include="tetris\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.7-32" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="tetris\" />
+    <Folder Include="packman\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".gitignore">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
