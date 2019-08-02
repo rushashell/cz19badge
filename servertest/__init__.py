@@ -43,6 +43,11 @@ server.register_on_connect(host_on_connect)
 server.register_on_disconnect(host_on_disconnect)
 server.register_on_row(host_on_row)
 server.register_on_gameover(host_on_gameover)
+
+if "rgb" in sys.modules:
+  print("on the badge")
+  server.network_type = gameservices.GAME_HOST_NETWORK_TYPE_HOTSPOT
+
 server.start()
 
 if "rgb" in sys.modules:

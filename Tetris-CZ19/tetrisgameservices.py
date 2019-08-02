@@ -23,9 +23,11 @@ class TetrisGameHost:
     self.game_host.register_on_connect(self._callback_on_connect)
     self.game_host.register_on_disconnect(self._callback_on_disconnect)
     self.game_host.register_on_data(self._callback_on_data)
+    self.network_type = gameservices.GAME_HOST_NETWORK_TYPE_NORMAL
     pass
 
   def start(self):
+    self.game_host.network_type = self.network_type
     self.game_host.start()
 
   def stop(self):
@@ -83,9 +85,11 @@ class TetrisGameClient:
     self.game_client.register_on_connect(self._callback_on_connect)
     self.game_client.register_on_disconnect(self._callback_on_disconnect)
     self.game_client.register_on_data(self._callback_on_data)
+    self.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_NORMAL
     pass
 
   def start(self, ip_address):
+    self.game_client.network_type = self.network_type
     self.game_client.start(ip_address)
 
   def stop(self):

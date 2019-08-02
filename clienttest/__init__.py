@@ -60,7 +60,13 @@ client.register_on_connect(client_on_connect)
 client.register_on_disconnect(client_on_disconnect)
 client.register_on_row(client_on_row)
 client.register_on_gameover(client_on_gameover)
-client.start("204.2.68.199")
+
+if not "rgb" in sys.modules:
+  client.start("204.2.68.199")
+else:
+  print("on the badge")
+  client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT
+  client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
 
 if "rgb" in sys.modules:
   rgb.clear()

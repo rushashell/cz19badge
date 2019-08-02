@@ -16,6 +16,16 @@ except ImportError:
   pass
 
 try:
+  import consts
+except ImportError:
+  pass
+
+try:
+  import network
+except:
+  pass
+
+try:
   import uinterface
 except ImportError:
   pass
@@ -31,9 +41,45 @@ if (not hasattr("time", "ticks_ms")):
   except:
     pass
 
-HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
 PORT = 55667        # Port to listen on (non-privileged ports are > 1023)
 EOF = '\x04abcd'
+
+GAME_HOST_NETWORK_TYPE_NORMAL = 0
+GAME_HOST_NETWORK_TYPE_HOTSPOT = 1
+GAME_CLIENT_NETWORK_TYPE_NORMAL = 10
+GAME_CLIENT_NETWORK_TYPE_HOTSPOT = 11
+
+GAME_NETWORK_TYPE_HOTSPOT_SSID = "TetrisCZ19"
+GAME_NETWORK_TYPE_HOTSPOT_PASSWD = "Ajk39128asdaD"
+GAME_NETWORK_TYPE_HOTSPOT_CHANNEL = 11 
+GAME_NETWORK_TYPE_HOTSPOT_HIDDEN = False
+GAME_NETWORK_TYPE_HOTSPOT_AUTHMODE = 2
+GAME_NETWORK_TYPE_HOTSPOT_SERVERIP = "192.168.4.1"
+
+class NetworkSwitcher:
+  def switch(self, type):
+    if "wifi" in sys.modules and "uinterface" in sys.modules:
+      sta_if = network.WLAN(network.STA_IF)
+      ap_if = network.WLAN(network.AP_IF)
+      if type == GAME_HOST_NETWORK_TYPE_NORMAL or type == GAME_CLIENT_NETWORK_TYPE_NORMAL:
+        if not wifi.status():
+          print("Connecting to Wi-Fi...")
+          uinterface.connect_wifi()
+      elif type == GAME_HOST_NETWORK_TYPE_HOTSPOT:
+        if sta_if.active():
+          sta_if.active(False)
+        ap_if.active(True)
+        print("Creating HOTSPOT " + GAME_NETWORK_TYPE_HOTSPOT_SSID + "...")
+        ap_if.config(essid=GAME_NETWORK_TYPE_HOTSPOT_SSID, channel=GAME_NETWORK_TYPE_HOTSPOT_CHANNEL, hidden=GAME_NETWORK_TYPE_HOTSPOT_HIDDEN, password=GAME_NETWORK_TYPE_HOTSPOT_PASSWD, authmode=GAME_NETWORK_TYPE_HOTSPOT_AUTHMODE)
+      elif type == GAME_CLIENT_NETWORK_TYPE_HOTSPOT:
+        if ap_if.active():
+          #ap_if.active(False)
+          sta_if.active(True)
+        if not sta_if.isconnected():
+          print("Connecting to HOTSPOT network " + GAME_NETWORK_TYPE_HOTSPOT_SSID + "...")
+          sta_if.connect(GAME_NETWORK_TYPE_HOTSPOT_SSID, GAME_NETWORK_TYPE_HOTSPOT_PASSWD)
+          while not sta_if.isconnected():
+            pass
 
 class GameHost:
   """Simple Game TCP listener with 3 events"""
@@ -43,6 +89,8 @@ class GameHost:
     self.listen_thread = None
     self.is_running = False
     self.is_connected = False
+    self.network_switcher = NetworkSwitcher()
+    self.network_type = GAME_HOST_NETWORK_TYPE_NORMAL
     
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
@@ -54,9 +102,7 @@ class GameHost:
     pass
 
   def start(self):
-    if "wifi" in sys.modules and "uinterface" in sys.modules:
-      if not wifi.status():
-        uinterface.connect_wifi()
+    self.network_switcher.switch(self.network_type)
 
     addr = socket.getaddrinfo("0.0.0.0", self.port)[0][-1]
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -170,6 +216,8 @@ class GameClient:
     self.is_running = False
     self.is_connected = False
     self.ip_address = None
+    self.network_switcher = NetworkSwitcher()
+    self.network_type = GAME_CLIENT_NETWORK_TYPE_NORMAL
     
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
@@ -184,10 +232,8 @@ class GameClient:
     if (ip_address is None or ip_address == "" or len(ip_address) < 7):
       return False 
 
-    if "wifi" in sys.modules and "uinterface" in sys.modules:
-      if not wifi.status():
-        uinterface.connect_wifi()
-      
+    print("current network_type: " + str(self.network_type))
+    self.network_switcher.switch(self.network_type)
     self.ip_address = ip_address
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.sock.settimeout(0.1)
