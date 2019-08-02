@@ -10,10 +10,7 @@ try:
   import random
 except ImportError:
   import urandom as random
-  
-if (not hasattr("time", "ticks_ms")):
-  time.ticks_ms = lambda: int(round(time.time() * 1000))
-  
+ 
 class TetrisGameHost:
   """Tetris Game host for interaction with a TetrisGameClient"""
 

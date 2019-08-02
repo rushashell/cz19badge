@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3cb944f0-94f9-4380-8114-af324679f8b6}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>packman\__init__.py</StartupFile>
+    <StartupFile>servertest\__init__.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -19,10 +19,14 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="packman\gameservices.py" />
+    <Compile Include="clienttest\__init__.py" />
+    <Compile Include="modules\gameservices.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
-    <Compile Include="packman\tetrisgameservices.py">
+    <Compile Include="modules\tetrisgameservices.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="servertest\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="tetris\__init__.py">
@@ -33,6 +37,9 @@
     <InterpreterReference Include="Global|PythonCore|3.7-32" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="modules\" />
+    <Folder Include="clienttest\" />
+    <Folder Include="servertest\" />
     <Folder Include="tetris\" />
     <Folder Include="packman\" />
   </ItemGroup>
