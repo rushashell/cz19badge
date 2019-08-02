@@ -133,14 +133,12 @@ class GameHost:
             self.CALLBACK_ON_DATA(data)
 
           gc.collect()
+        except OSError as err:
+          pass
         except Exception as err:
           if type(err) == ConnectionAbortedError:
             self.is_connected = False 
             break
-          if type(err) == socket.timeout:
-            #self.is_connected = False 
-            #break
-            pass
           pass
         
         time.sleep(.01)
@@ -230,12 +228,9 @@ class GameClient:
           to_send = data
 
         self.sock.send(to_send)
-        print("sending...")
-        pring(to_send)
-      except Exception as err:
-        if type(err) == socket.timeout:
-          self.is_connected = False
-          return False
+      except OSError as err:
+        pass
+      except:
         pass
 
   def _client_handler(self):
@@ -277,7 +272,7 @@ class GameClient:
             pass
 
           gc.collect()
-        except socket.timeout:
+        except OSError as err:
           pass
         except:
           break

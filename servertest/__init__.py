@@ -11,9 +11,7 @@ try:
 except ImportError:
   pass
 
-import gameservices
-import tetrisgameservices
-
+import gameservices, tetrisgameservices
 connected = False
 
 def host_on_connect(addr):
@@ -52,6 +50,7 @@ if "rgb" in sys.modules:
   rgb.background((0,0,0))
   rgb.scrolltext("(host) running...", (255,255,255))
 
+print("(host) running...")
 
 if (not hasattr("time", "ticks_ms")):
   try:
@@ -69,12 +68,11 @@ while True:
     cur_ticks = time.ticks_ms()
     diff_ticks = cur_ticks - lastping
     if diff_ticks > 10000:
-      print("sending row...")
-      server.send_row_added()
-      row_send += 1
       lastping = cur_ticks
-
-      if row_send == 4:
-        row_send = 0
-        server.send_gameover()
-    
+      if row_send >=0 and row_send < 4:
+        print("sending row...")
+        server.send_row_added()
+        row_send += 1
+      if row_send == 5:
+        row_send = -3
+        server.send_gameover()    
