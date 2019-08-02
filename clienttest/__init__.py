@@ -6,8 +6,9 @@ sys.path.append("/apps/" + BASE_MODULE)
 sys.path.append("/apps/tetris_cz19")
 sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
+DEBUG = True
 connected = False 
-row_added = False
+received_rows = 0
 
 try:
   import rgb
@@ -36,12 +37,14 @@ def client_on_disconnect(addr):
   show_scrolltext("(client) host disconnected: " + addr) 
 
 def client_on_row():
-  print("(client) row added")
-  show_scrolltext("(client) host had row") 
+  global received_rows
+  received_rows += 1
+  print("(client) received row")
+  show_scrolltext("(client) received row " + str(received_rows)) 
 
 def client_on_gameover():
-  print("(client) gameover")
-  show_scrolltext("(client) host gameover") 
+  print("(client) received gameover")
+  show_scrolltext("(client) received gameover") 
 
 def on_left(pressed):
   global connected
@@ -60,18 +63,27 @@ client.register_on_connect(client_on_connect)
 client.register_on_disconnect(client_on_disconnect)
 client.register_on_row(client_on_row)
 client.register_on_gameover(client_on_gameover)
-
-if not "rgb" in sys.modules:
-  client.start("204.2.68.199")
+ 
+# TEMPORARY
+if DEBUG == True or not "rgb" in sys.modules:
+  client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_NORMAL
+  
+  if "rgb" in sys.modules:
+    # Running on badge, so connect to PDW
+    client.start("204.2.68.199")
+  else:
+    # Running in debug mode on PDW, connect to badge
+    client.start("100.64.13.227")
 else:
-  print("on the badge")
-  client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT
+  client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT 
   client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
 
 if "rgb" in sys.modules:
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("Running...", (255,255,255))
+else:
+  print("Running...")
 
 if "buttons" in sys.modules:
   import buttons, defines

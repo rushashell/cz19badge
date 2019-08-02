@@ -101,6 +101,7 @@ class GameHost:
     
     self.sock.listen(1) # Only allow one single connection at a time
     #self.sock.settimeout(None)
+    
 
     if "wifi" in sys.modules:
       self.listen_thread = thread.start_new_thread("listen_thread", self._listen, ())
@@ -126,28 +127,38 @@ class GameHost:
     return True
 
   def send_data(self, data):
+    global EOF
+
     if (self.is_running and self.client != None and self.is_connected == True):
       try:
+        to_send = None
         if type(data) == str :
           if len(data) > 0 and data[len(data)-1] != EOF:
             data = data + EOF
-          self.client.sendall(data.encode("ascii"))
-          pass
+          to_send = data.encode("ascii")
         else:
           if len(data) > 0 and data[len(data)-1] != EOF:
             data.append(EOF)
-          self.client.sendall(data)
+            to_send = data
+
+        print("sending to client: " + data)
+        self.client.sendall(data)
+        return True
       except Exception as err:
         if type(err) == ConnectionAbortedError:
           self.is_connected = False 
         if type(err) == ConnectionResetError:
           self.is_connected = False
-        pass
+        return False 
 
   def _listen(self):
+    global EOF
+
     while self.is_running:
-      # Wait for connection
+      # we wait for a connection, so show a waiting icon...
+      wifi_extended.animate_wifi()
       self.client, remote_addr = self.sock.accept()
+      wifi_extended.animate_end()
       self.client.settimeout(.1)
       self.is_connected = True
       if (self.CALLBACK_ON_CONNECT != None):
@@ -156,7 +167,7 @@ class GameHost:
       lastping = time.ticks_ms()
       while self.is_running and self.client != None and self.is_connected == True:
         try:
-          data = self.client.recv(64).decode("ascii")
+          data = self.client.recv(1024).decode("ascii")
           if (not data or len(data) == 0) and self.client.fileno() == -1: break
 
           if data and len(data) > 0:
@@ -164,12 +175,11 @@ class GameHost:
               continue
               
             if data.endswith(EOF):
-              data = data.replace(EOF, "")
+              data = data.replace(EOF, "", 1)
 
-            print(data)
             self.CALLBACK_ON_DATA(data)
-
-          gc.collect()
+            gc.collect()
+          
         except OSError as err:
           pass
         except Exception as err:
@@ -254,6 +264,7 @@ class GameClient:
     return True
 
   def send_data(self, data):
+    global EOF
     if (self.is_running and self.is_connected == True):
       try:
         to_send = None
@@ -266,11 +277,12 @@ class GameClient:
             data.append(EOF)
           to_send = data
 
+        print("sending data to server: " + to_send)
         self.sock.send(to_send)
-      except OSError as err:
-        pass
+      except OSError as err: # also a timeout
+        return False 
       except:
-        pass
+        return False 
 
   def _client_handler(self):
     while self.is_running:
@@ -294,7 +306,7 @@ class GameClient:
       lastping = time.ticks_ms()
       while self.is_running and self.is_connected == True:
         try:
-          data = self.sock.recv(64).decode("ascii")
+          data = self.sock.recv(1024).decode("ascii")
           if not data:
             break
 
@@ -305,12 +317,12 @@ class GameClient:
               continue
               
             if data.endswith(EOF):
-              data = data.replace(EOF, "")
+              data = data.replace(EOF, "", 1)
 
             self.CALLBACK_ON_DATA(data)
+            gc.collect()
             pass
 
-          gc.collect()
         except OSError as err:
           pass
         except:

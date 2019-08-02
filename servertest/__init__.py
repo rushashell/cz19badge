@@ -12,13 +12,17 @@ except ImportError:
   pass
 
 import gameservices, tetrisgameservices
+
+DEBUG = True
 connected = False
+received_rows = 0
 
 def host_on_connect(addr):
   global connected
   connected = True
   print("(host) connected:" + addr)
   if "rgb" in sys.modules:
+    rgb.clear()
     rgb.scrolltext("(host) client connected: " + addr, (255,255,255)) 
 
 def host_on_disconnect(addr):
@@ -26,17 +30,34 @@ def host_on_disconnect(addr):
   connected = False
   print("(host) disconnected:" + addr)
   if "rgb" in sys.modules:
+    rgb.clear()
     rgb.scrolltext("(host) client disconnected: " + addr, (255,255,255)) 
 
 def host_on_row():
+  global received_rows
   print("(host) row added")
+  received_rows += received_rows
   if "rgb" in sys.modules:
-    rgb.scrolltext("(host) client had row", (255,255,255)) 
+    rgb.clear()
+    rgb.scrolltext("(host) received row " + str(received_rows), (255,255,255)) 
 
 def host_on_gameover():
   print("(host) gameover")
   if "rgb" in sys.modules:
-    rgb.scrolltext("(host) client gameover", (255,255,255)) 
+    rgb.clear()
+    rgb.scrolltext("(host) received gameover", (255,255,255)) 
+
+def on_left(pressed):
+  global connected, server
+  if pressed and connected:
+    print ("pressed")
+    server.send_row_added()
+
+def on_right(pressed):
+  global connected
+  if pressed and connected:
+    print ("pressed")
+    server.send_gameover()
 
 server = tetrisgameservices.TetrisGameHost()
 server.register_on_connect(host_on_connect)
@@ -44,7 +65,9 @@ server.register_on_disconnect(host_on_disconnect)
 server.register_on_row(host_on_row)
 server.register_on_gameover(host_on_gameover)
 
-if "rgb" in sys.modules:
+if DEBUG == True or not "rgb" in sys.modules:
+  server.network_type = gameservices.GAME_HOST_NETWORK_TYPE_NORMAL
+else:
   print("on the badge")
   server.network_type = gameservices.GAME_HOST_NETWORK_TYPE_HOTSPOT
 
@@ -54,6 +77,11 @@ if "rgb" in sys.modules:
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("(host) running...", (255,255,255))
+
+if "buttons" in sys.modules:
+  import buttons, defines
+  buttons.register(defines.BTN_LEFT, on_left)
+  buttons.register(defines.BTN_RIGHT, on_right)
 
 print("(host) running...")
 
@@ -69,15 +97,12 @@ lastping = time.ticks_ms()
 while True:
   time.sleep(0.1)
 
-  if connected:
+  if connected and not "rgb" in sys.modules:
     cur_ticks = time.ticks_ms()
     diff_ticks = cur_ticks - lastping
     if diff_ticks > 10000:
       lastping = cur_ticks
-      if row_send >=0 and row_send < 4:
+      if row_send >=0 and row_send < 8:
         print("sending row...")
         server.send_row_added()
         row_send += 1
-      if row_send == 5:
-        row_send = -3
-        server.send_gameover()    
