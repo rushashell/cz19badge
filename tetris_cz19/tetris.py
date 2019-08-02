@@ -156,7 +156,7 @@ class Tetris:
         self.game_init()
 
         while True:
-            time.sleep(.01)
+            time.sleep(.1)
             self.game_update()
             # self.draw()
 

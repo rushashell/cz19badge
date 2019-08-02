@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3cb944f0-94f9-4380-8114-af324679f8b6}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>clienttest\__init__.py</StartupFile>
+    <StartupFile>servertest\__init__.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

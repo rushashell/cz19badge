@@ -139,10 +139,10 @@ class GameHost:
         else:
           if len(data) > 0 and data[len(data)-1] != EOF:
             data.append(EOF)
-            to_send = data
+          to_send = data
 
         print("sending to client: " + data)
-        self.client.sendall(data)
+        self.client.send(to_send)
         return True
       except Exception as err:
         if type(err) == ConnectionAbortedError:
@@ -153,60 +153,64 @@ class GameHost:
 
   def _listen(self):
     global EOF
+    
+    try:
+      while self.is_running:
+        # we wait for a connection, so show a waiting icon...
+        wifi_extended.animate_wifi()
+        self.client, remote_addr = self.sock.accept()
+        wifi_extended.animate_end()
+        self.client.settimeout(.1)
+        self.is_connected = True
+        if (self.CALLBACK_ON_CONNECT != None):
+          self.CALLBACK_ON_CONNECT(remote_addr[0])
 
-    while self.is_running:
-      # we wait for a connection, so show a waiting icon...
-      wifi_extended.animate_wifi()
-      self.client, remote_addr = self.sock.accept()
-      wifi_extended.animate_end()
-      self.client.settimeout(.1)
-      self.is_connected = True
-      if (self.CALLBACK_ON_CONNECT != None):
-        self.CALLBACK_ON_CONNECT(remote_addr[0])
-
-      lastping = time.ticks_ms()
-      while self.is_running and self.client != None and self.is_connected == True:
-        try:
-          data = self.client.recv(1024).decode("ascii")
-          if (not data or len(data) == 0) and self.client.fileno() == -1: break
-
-          if data and len(data) > 0:
-            if (self.CALLBACK_ON_DATA == None):
-              continue
-              
-            if data.endswith(EOF):
-              data = data.replace(EOF, "", 1)
-
-            self.CALLBACK_ON_DATA(data)
-            gc.collect()
-          
-        except OSError as err:
-          pass
-        except Exception as err:
-          if type(err) == ConnectionAbortedError:
-            self.is_connected = False 
-            break
-          pass
-        
-        time.sleep(.01)
-
-        cur_ticks = time.ticks_ms()
-        diff_ticks = cur_ticks - lastping
-        if diff_ticks > 10000: # Every 10 seconds we ping / pong 
+        lastping = time.ticks_ms()
+        while self.is_running and self.client != None and self.is_connected == True:
           try:
-            self.send_data("ping")
+            data = self.client.recv(1024).decode("ascii")
+            if (not data or len(data) == 0) and self.client.fileno() == -1: break
+
+            if data and len(data) > 0:
+              if (self.CALLBACK_ON_DATA == None):
+                continue
+              
+              if data.endswith(EOF):
+                data = data.replace(EOF, "", 1)
+
+              self.CALLBACK_ON_DATA(data)
+          
+          except OSError as err:
+            pass
           except Exception as err:
-            if not self.is_connected:
+            if type(err) == ConnectionAbortedError:
+              self.is_connected = False 
               break
-          lastping = cur_ticks
+            pass
+        
+          time.sleep(.1)
 
-      if (self.CALLBACK_ON_DISCONNECT != None):
-        self.CALLBACK_ON_DISCONNECT(remote_addr[0])
+          cur_ticks = time.ticks_ms()
+          diff_ticks = cur_ticks - lastping
+          if diff_ticks > 30000: # Every 10 seconds we ping / pong 
+            try:
+              self.send_data("ping")
+              gc.collect()
+            except Exception as err:
+              if not self.is_connected:
+                break
+            lastping = cur_ticks
 
-      self.client.close()
-      self.client = None
-      self.is_connected = False
-    pass
+        if (self.CALLBACK_ON_DISCONNECT != None):
+          self.CALLBACK_ON_DISCONNECT(remote_addr[0])
+
+        self.client.close()
+        self.client = None
+        self.is_connected = False
+      pass
+    except Exception as err:
+      print("FATAL ERROR: " + err)
+      pass 
 
 class GameClient:
   """Simple Game TCP client with 3 events"""
@@ -268,6 +272,7 @@ class GameClient:
     if (self.is_running and self.is_connected == True):
       try:
         to_send = None
+
         if type(data) == str:
           if len(data) > 0 and data[len(data)-1] != EOF:
             data = data + EOF
@@ -285,69 +290,75 @@ class GameClient:
         return False 
 
   def _client_handler(self):
-    while self.is_running:
-      
-      # Setup connection, if needed
-      try:
-        if not self.is_connected == True:
-          self.sock.connect((self.ip_address, self.port))
-          self.is_connected = True
-          if (self.CALLBACK_ON_CONNECT != None):
-            self.CALLBACK_ON_CONNECT(self.ip_address)
-
-      except Exception as err:
-        # we should wait 10 seconds before going further 
-        connect_ticks = time.ticks_ms()
-        while True:
-          diff_ticks = time.ticks_ms() - connect_ticks
-          if diff_ticks > 10000: # Every 10 seconds we try again
-              continue
-
-      lastping = time.ticks_ms()
-      while self.is_running and self.is_connected == True:
-        try:
-          data = self.sock.recv(1024).decode("ascii")
-          if not data:
-            break
-
-          if (not data or len(data) == 0) and self.sock.fileno() == -1: break
-
-          if data and len(data) > 0:
-            if (self.CALLBACK_ON_DATA == None):
-              continue
-              
-            if data.endswith(EOF):
-              data = data.replace(EOF, "", 1)
-
-            self.CALLBACK_ON_DATA(data)
-            gc.collect()
-            pass
-
-        except OSError as err:
-          pass
-        except:
-          break
-        
-        time.sleep(.01)
-
-        cur_ticks = time.ticks_ms()
-        diff_ticks = cur_ticks - lastping
-        if diff_ticks > 10000: # Every 10 seconds we ping / pong 
-          try:
-            self.send_data("ping")
-          except Exception as err:
-            break
-          lastping = cur_ticks
-
-      self.is_running = False 
-      self.is_connected = False 
-      if (self.CALLBACK_ON_DISCONNECT != None):
-        self.CALLBACK_ON_DISCONNECT(self.ip_address)
-
     try:
-      self.sock.shutdown(socket.SHUT_RDWR)
-      self.sock.close()
-    except:
-      pass
+      while self.is_running:
+      
+        # Setup connection, if needed
+        try:
+          if not self.is_connected == True:
+            wifi_extended.animate_wifi()
+            self.sock.connect((self.ip_address, self.port))
+            wifi_extended.animate_end()
+            self.is_connected = True
+            if (self.CALLBACK_ON_CONNECT != None):
+              self.CALLBACK_ON_CONNECT(self.ip_address)
 
-    pass
+        except Exception as err:
+          # we should wait 10 seconds before going further 
+          connect_ticks = time.ticks_ms()
+          while True:
+            diff_ticks = time.ticks_ms() - connect_ticks
+            if diff_ticks > 10000: # Every 10 seconds we try again
+                continue
+
+        lastping = time.ticks_ms()
+        while self.is_running and self.is_connected == True:
+          try:
+            data = self.sock.recv(1024).decode("ascii")
+            if not data:
+              break
+
+            if (not data or len(data) == 0) and self.sock.fileno() == -1: break
+
+            if data and len(data) > 0:
+              if (self.CALLBACK_ON_DATA == None):
+                continue
+              
+              if data.endswith(EOF):
+                data = data.replace(EOF, "", 1)
+
+              self.CALLBACK_ON_DATA(data)
+              pass
+
+          except OSError as err:
+            pass
+          except:
+            break
+        
+          time.sleep(.1)
+
+          cur_ticks = time.ticks_ms()
+          diff_ticks = cur_ticks - lastping
+          if diff_ticks > 30000: # Every 30 seconds we ping / pong 
+            try:
+              self.send_data("ping")
+              gc.collect()
+            except Exception as err:
+              break
+            lastping = cur_ticks
+
+        self.is_running = False 
+        self.is_connected = False 
+        if (self.CALLBACK_ON_DISCONNECT != None):
+          self.CALLBACK_ON_DISCONNECT(self.ip_address)
+
+      try:
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
+      except:
+        pass
+
+      pass
+    except Exception as err:
+      print("FATAL ERROR: " + err)
+      pass
