@@ -6,7 +6,7 @@ sys.path.append("/apps/" + BASE_MODULE)
 sys.path.append("/apps/tetris_cz19")
 sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
-DEBUG = True
+DEBUG = False
 connected = False 
 received_rows = 0
 

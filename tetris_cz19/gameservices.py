@@ -56,6 +56,8 @@ GAME_NETWORK_TYPE_HOTSPOT_HIDDEN = False
 GAME_NETWORK_TYPE_HOTSPOT_AUTHMODE = 2
 GAME_NETWORK_TYPE_HOTSPOT_SERVERIP = "192.168.4.1"
 
+BUFFER_SIZE = 64
+
 class NetworkSwitcher:
   def switch(self, type):
     if not "wifi" in sys.modules or not "uinterface" in sys.modules:
@@ -70,6 +72,8 @@ class NetworkSwitcher:
     elif type == GAME_CLIENT_NETWORK_TYPE_HOTSPOT:
       return wifi_extended.hotspot_connect(GAME_NETWORK_TYPE_HOTSPOT_SSID, GAME_NETWORK_TYPE_HOTSPOT_PASSWD)
 
+    pass
+
 class GameHost:
   """Simple Game TCP listener with 3 events"""
   def __init__(self):
@@ -80,7 +84,8 @@ class GameHost:
     self.is_connected = False
     self.network_switcher = NetworkSwitcher()
     self.network_type = GAME_HOST_NETWORK_TYPE_NORMAL
-    
+    self.buffer_size = BUFFER_SIZE
+
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
     self.CALLBACK_ON_DISCONNECT = None 
@@ -131,17 +136,14 @@ class GameHost:
 
     if (self.is_running and self.client != None and self.is_connected == True):
       try:
-        to_send = None
-        if type(data) == str :
-          if len(data) > 0 and data[len(data)-1] != EOF:
-            data = data + EOF
+        to_send = data
+        if type(data) == str:
           to_send = data.encode("ascii")
-        else:
-          if len(data) > 0 and data[len(data)-1] != EOF:
-            data.append(EOF)
-          to_send = data
 
-        print("sending to client: " + data)
+        if len(to_send) > 0 and data[len(to_send)-1] != EOF:
+          to_send.append(EOF)
+
+        print("sending data to client: " + to_send.decode("ascii"))
         self.client.send(to_send)
         return True
       except Exception as err:
@@ -168,7 +170,7 @@ class GameHost:
         lastping = time.ticks_ms()
         while self.is_running and self.client != None and self.is_connected == True:
           try:
-            data = self.client.recv(1024).decode("ascii")
+            data = self.client.recv(this.buffer_size).decode("ascii")
             if (not data or len(data) == 0) and self.client.fileno() == -1: break
 
             if data and len(data) > 0:
@@ -223,7 +225,8 @@ class GameClient:
     self.ip_address = None
     self.network_switcher = NetworkSwitcher()
     self.network_type = GAME_CLIENT_NETWORK_TYPE_NORMAL
-    
+    self.buffer_size = BUFFER_SIZE
+
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
     self.CALLBACK_ON_DISCONNECT = None 
@@ -269,20 +272,17 @@ class GameClient:
 
   def send_data(self, data):
     global EOF
+
     if (self.is_running and self.is_connected == True):
       try:
-        to_send = None
-
+        to_send = data
         if type(data) == str:
-          if len(data) > 0 and data[len(data)-1] != EOF:
-            data = data + EOF
           to_send = data.encode("ascii")
-        else:
-          if len(data) > 0 and data[len(data)-1] != EOF:
-            data.append(EOF)
-          to_send = data
 
-        print("sending data to server: " + to_send)
+        if len(to_send) > 0 and data[len(to_send)-1] != EOF:
+          to_send.append(EOF)
+
+        print("sending data to server: " + to_send.decode("ascii"))
         self.sock.send(to_send)
       except OSError as err: # also a timeout
         return False 
@@ -314,7 +314,7 @@ class GameClient:
         lastping = time.ticks_ms()
         while self.is_running and self.is_connected == True:
           try:
-            data = self.sock.recv(1024).decode("ascii")
+            data = self.sock.recv(self.buffer_size).decode("ascii")
             if not data:
               break
 

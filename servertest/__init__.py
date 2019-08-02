@@ -13,7 +13,7 @@ except ImportError:
 
 import gameservices, tetrisgameservices
 
-DEBUG = True
+DEBUG = False
 connected = False
 received_rows = 0
 
