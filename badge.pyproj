@@ -23,13 +23,16 @@
     <Compile Include="Tetris-CZ19\gameservices.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
-    <Compile Include="Tetris-CZ19\tetrisgameservices.py">
+    <Compile Include="tetris_cz19\tetrisgameservices.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="servertest\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tetris-CZ19\__init__.py">
+    <Compile Include="tetris_cz19\wifi_extended.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="tetris_cz19\__init__.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -39,7 +42,7 @@
   <ItemGroup>
     <Folder Include="clienttest\" />
     <Folder Include="servertest\" />
-    <Folder Include="Tetris-CZ19\" />
+    <Folder Include="tetris_cz19\" />
     <Folder Include="packman\" />
   </ItemGroup>
   <ItemGroup>

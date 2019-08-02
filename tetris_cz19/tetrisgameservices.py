@@ -129,7 +129,9 @@ class TetrisGameClient:
   def _callback_on_data(self, data):
     if (data == "ping"):
       return True
+
     if ((data == "row" or data == "row\r\n" or data == "'row'" or data == "'row\\r\\n'") and self.CALLBACK_ON_ROW != None):
       self.CALLBACK_ON_ROW()
-    if ((data == "gameover" or data == "gameover\r\n" or data == "'gameover'" or data == "'gameover\\r\\n'") and self.CALLBACK_ON_ROW != None):
+
+    if ((data == "gameover" or data == "gameover\r\n" or data == "'gameover'" or data == "'gameover\\r\\n'") and self.CALLBACK_ON_GAMEOVER != None):
       self.CALLBACK_ON_GAMEOVER()
