@@ -3,8 +3,8 @@ BASE_MODULE = "servertest"
 import sys, time
 # We would like to import modules that are added to his folder.
 sys.path.append("/apps/" + BASE_MODULE)
-sys.path.append("/apps/modules")
-sys.path.append("D:\\Userdocs\\PeterdeWit\\Desktop\\CZ2019\\badge\\modules")
+sys.path.append("/apps/Tetris-CZ19")
+sys.path.append("H:\\CZ2019\\badge\\Tetris-CZ19")
 
 try:
   import rgb

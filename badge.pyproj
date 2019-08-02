@@ -20,16 +20,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="clienttest\__init__.py" />
-    <Compile Include="modules\gameservices.py" />
+    <Compile Include="Tetris-CZ19\gameservices.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
-    <Compile Include="modules\tetrisgameservices.py">
+    <Compile Include="Tetris-CZ19\tetrisgameservices.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="servertest\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="tetris\__init__.py">
+    <Compile Include="Tetris-CZ19\__init__.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -37,10 +37,9 @@
     <InterpreterReference Include="Global|PythonCore|3.7-32" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="modules\" />
     <Folder Include="clienttest\" />
     <Folder Include="servertest\" />
-    <Folder Include="tetris\" />
+    <Folder Include="Tetris-CZ19\" />
     <Folder Include="packman\" />
   </ItemGroup>
   <ItemGroup>

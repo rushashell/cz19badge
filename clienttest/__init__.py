@@ -3,7 +3,8 @@ BASE_MODULE = "clienttest"
 import sys, time
 # We would like to import modules that are added to his folder.
 sys.path.append("/apps/" + BASE_MODULE)
-sys.path.append("/apps/modules")
+sys.path.append("/apps/Tetris-CZ19")
+sys.path.append("H:\\CZ2019\\badge\\Tetris-CZ19")
 
 connected = False 
 row_added = False
