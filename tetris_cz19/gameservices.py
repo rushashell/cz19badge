@@ -211,7 +211,7 @@ class GameHost:
         self.is_connected = False
       pass
     except Exception as err:
-      print("FATAL ERROR: " + err)
+      print("FATAL ERROR: " + str(err))
       pass 
 
 class GameClient:
@@ -360,5 +360,5 @@ class GameClient:
 
       pass
     except Exception as err:
-      print("FATAL ERROR: " + err)
+      print("FATAL ERROR: " + str(err))
       pass
