@@ -8,7 +8,7 @@ sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
 import badgehelper
 
-DEBUG = True
+DEBUG = False
 connected = False 
 received_rows = 0
 
@@ -49,19 +49,19 @@ def on_left(pressed):
   global connected
   if pressed and connected:
     print ("pressed")
-    client.send_row_added()
+    client.send_data("row")
 
 def on_right(pressed):
   global connected
   if pressed and connected:
     print ("pressed")
-    client.send_gameover()
+    client.send_data("gameover")
 
-client = tetrisgameservices.TetrisGameClient()
-client.register_on_connect(client_on_connect)
-client.register_on_disconnect(client_on_disconnect)
-client.register_on_row(client_on_row)
-client.register_on_gameover(client_on_gameover)
+client = gameservices.GameClient()
+#client.register_on_connect(client_on_connect)
+#client.register_on_disconnect(client_on_disconnect)
+#client.register_on_row(client_on_row)
+#client.register_on_gameover(client_on_gameover)
  
 # TEMPORARY
 if DEBUG == True or not badgehelper.on_badge():
@@ -78,6 +78,15 @@ else:
   client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT 
   client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
 
+# Wait for connection
+print("Waiting for connection...")
+connected = client.wait_for_connection()
+
+if connected:
+  print("connected")
+else:
+  print("not connected")
+
 if badgehelper.on_badge():
   rgb.clear()
   rgb.background((0,0,0))
@@ -91,3 +100,12 @@ else:
 
 while True:
   time.sleep(0.1)
+  data = client.read_data()
+
+  if not data:
+    continue
+
+  if data == "row" or data == "row\r\n" or data == "'row'" or data == "'row\\r\\n'":
+    client_on_row()
+  elif data == "gameover":
+    client_on_gameover()

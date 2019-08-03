@@ -3,7 +3,7 @@ import urandom
 import rgb
 import gameservices
 import tetrisgameservices
-import gc
+import buttons, defines
 
 # Basic implementation of tetris, adapted to CZ19 badge
 
@@ -96,70 +96,54 @@ class Tetris:
             0, 0, -1, 0, 0, 1, 1, 0, 
             0, 0, -1, 0, 0, 1, 0, -1
         ]
-
-        import buttons, defines
-        # Controls are rotated to the left
-        # UP button = left 
-        # DOWN button = right 
-        # RIGHT button = down 
-        # LEFT button = up 
-
-        def btn_a(button_is_down):
-          if button_is_down:
-              # self.rotate_piece()
-              self.add_line()
-              pass
-
-        def btn_up(button_is_down):
-          if button_is_down:
-            if self.board_rotated:
-              self.move_left()
-            else:
-              self.move_right()
-            pass
-
-        def btn_down(button_is_down):
-          if button_is_down:
-            if self.board_rotated:
-              self.move_right()
-            else:
-              self.move_left()
-            pass
-
-        def btn_right(button_is_down):
-          if button_is_down:
-            if self.board_rotated:
-              self.rotate_piece()
-            else:
-              self.lower_piece()
-            pass
-
-        def btn_left(button_is_down):
-          if button_is_down:
-            if self.board_rotated:
-              self.lower_piece()
-            else:
-              self.rotate_piece()
-            pass
-
-        buttons.register(defines.BTN_A, btn_a)
-        buttons.register(defines.BTN_UP, btn_up)
-        buttons.register(defines.BTN_DOWN, btn_down)
-        buttons.register(defines.BTN_LEFT, btn_left)
-        buttons.register(defines.BTN_RIGHT, btn_right)
+        
+        buttons.register(defines.BTN_A, self.btn_a)
+        buttons.register(defines.BTN_UP, self.btn_up)
+        buttons.register(defines.BTN_DOWN, self.btn_down)
+        buttons.register(defines.BTN_LEFT, self.btn_left)
+        buttons.register(defines.BTN_RIGHT, self.btn_right)
 
         self.client=None
         self.host=None
         self.connected=False
-        if self.mode=="multiplayer":
-          self.network_init()
 
-        self.game_init()
+    def btn_a(self, button_is_down):
+      if button_is_down:
+          # self.rotate_piece()
+          #self.add_line()
+          pass
 
-        while True:
-            time.sleep(.1)
-            self.game_update()
-            # self.draw()
+    def btn_up(self, button_is_down):
+      if button_is_down:
+        if self.board_rotated:
+          self.move_left()
+        else:
+          self.move_right()
+        pass
+
+    def btn_down(self, button_is_down):
+      if button_is_down:
+        if self.board_rotated:
+          self.move_right()
+        else:
+          self.move_left()
+        pass
+
+    def btn_right(self, button_is_down):
+      if button_is_down:
+        if self.board_rotated:
+          self.rotate_piece()
+        else:
+          self.lower_piece()
+        pass
+
+    def btn_left(self, button_is_down):
+      if button_is_down:
+        if self.board_rotated:
+          self.lower_piece()
+        else:
+          self.rotate_piece()
+        pass
 
     def multiplayer_on_connect(self,addr):
       self.connected = True
@@ -171,7 +155,7 @@ class Tetris:
 
     def multiplayer_on_row(self):
       print("(host) row added")
-      self.row_received()
+      self.receive_row+=1
       # on row
 
     def multiplayer_on_gameover(self):
@@ -180,33 +164,28 @@ class Tetris:
 
     def multiplayer_send_line(self):
       if self.role=="host":
-        self.host.send_row_added()
+        self.host.send_data("row")
       else:
-        self.client.send_row_added()
+        self.client.send_data("row")
 
     def multiplayer_send_gameover(self):
       if self.role=="host":
-        self.host.send_gameover()
+        self.host.send_data("gameover")
       else:
-        self.client.send_gameover()
+        self.client.send_data("gameover")
 
     def network_init(self):
       if self.role=="host":
-        self.host=tetrisgameservices.TetrisGameHost()
-        self.host.register_on_connect(self.multiplayer_on_connect)
-        self.host.register_on_disconnect(self.multiplayer_on_disconnect)
-        self.host.register_on_row(self.multiplayer_on_row)
-        self.host.register_on_gameover(self.multiplayer_on_gameover)
+        self.host=gameservices.GameHost()
         self.host.network_type = gameservices.GAME_HOST_NETWORK_TYPE_HOTSPOT
         self.host.start()
+        self.host.wait_for_connection()
+        self.connected = True        
       else:
-        self.client = tetrisgameservices.TetrisGameClient()
-        self.client.register_on_connect(self.multiplayer_on_connect)
-        self.client.register_on_disconnect(self.multiplayer_on_disconnect)
-        self.client.register_on_row(self.multiplayer_on_row)
-        self.client.register_on_gameover(self.multiplayer_on_gameover)
+        self.client = gameservices.GameClient()
         self.client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT
         self.client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
+        self.connected = self.client.wait_for_connection()
       while not(self.connected):
         time.sleep(.1)
 
@@ -226,6 +205,20 @@ class Tetris:
         self.score = 0
         self.game_blockedlines = 0
 
+    def start(self):
+        if self.mode=="multiplayer":
+          self.network_init()
+
+        self.game_init()
+
+        while True:
+            time.sleep(.1)
+            self.game_update()
+            
+            # self.draw()
+            if self.mode=="multiplayer":
+              self.network_handle_data()            
+
     def spawn_new_piece(self):
         self.piece_current = self.piece_next
         urandom.seed(time.ticks_ms())
@@ -237,7 +230,6 @@ class Tetris:
         # print("Piece:",self.piece_current)
 
     def game_update(self):
-        gc.collect()
         if self.receive_row > 0:
           self.receive_row-=1
           self.add_line()
@@ -402,9 +394,6 @@ class Tetris:
         if self.game_step_time > 50:
             self.game_step_time = self.game_step_time - self.game_step_speed_increase
 
-    def row_received(self):
-      self.receive_row+=1
-
     def add_line(self):
         for row in range(self.game_height-1):
             for col in range(self.game_width):
@@ -489,6 +478,19 @@ class Tetris:
         rgb.enablecomp()
         rgb.clear()
         rgb.scrolltext("game over")
+
+    def network_handle_data(self):
+      data = None
+      if self.role == "host":
+        data = self.host.read_data()
+      else:
+        data = self.client.read_data()
+
+      if data == "row":
+        self.multiplayer_on_row()
+      elif data == "gameover":
+        self.multiplayer_on_gameover()
+
 
 class Defs:
   def __init__(self):

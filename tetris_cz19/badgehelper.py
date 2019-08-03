@@ -22,5 +22,6 @@ def on_badge():
 if (not "ticks_ms" in dir(time)):
   try:
     time.ticks_ms = lambda: int(round(time.time() * 1000))
+    pass
   except:
     pass

@@ -61,19 +61,18 @@ class GameHost:
     self.network_switcher = NetworkSwitcher()
     self.network_type = GAME_HOST_NETWORK_TYPE_NORMAL
     self.buffer_size = BUFFER_SIZE
+    self.use_listener = False
 
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
     self.CALLBACK_ON_DISCONNECT = None 
     self.CALLBACK_ON_DATA = None 
-
+    
     random.seed(time.ticks_ms())
     self.client = None
     pass
 
   def start(self):
-    gc.enable()
-
     switched = self.network_switcher.switch(self.network_type)
     if not switched:
       return False 
@@ -83,12 +82,14 @@ class GameHost:
     self.sock.bind(addr)
     
     self.sock.listen(1) # Only allow one single connection at a time
-    #self.sock.settimeout(None)
+    self.sock.settimeout(None)
     
-    if badgehelper.on_badge():
-      self.listen_thread = thread.start_new_thread("listen_thread", self._listen, ())
-    else:
-      self.listen_thread = thread.start_new_thread(self._listen, ())
+    if self.use_listener:
+      if badgehelper.on_badge():
+        self.listen_thread = thread.start_new_thread("listen_thread", self._listen, ())
+      else:
+        self.listen_thread = thread.start_new_thread(self._listen, ())
+
     self.is_running = True 
 
   def stop(self):
@@ -107,94 +108,109 @@ class GameHost:
   def register_on_data(self, action = None):
     self.CALLBACK_ON_DATA = action
     return True
+  
+  def wait_for_connection(self):
+    # we wait for a connection, so show a waiting icon...
+    wifi_extended.animate_wifi()
+    self.client, remote_addr = self.sock.accept()
+    self.client.settimeout(0.01)
+    wifi_extended.animate_end()
+    self.is_connected = True
 
-  def send_data(self, data):
-    if (self.is_running and self.client != None and self.is_connected == True):
+  def disconnect(self):
+    if self.client:
+      self.client.close()
+      self.client = None
+      self.is_connected = False
+
+  def read_data(self):
+    data = []
+
+    if not self.is_connected or not self.is_running:
+      return data
+
+    if badgehelper.on_badge() or 1 == 0:
       try:
-        to_send = None
-        if type(data) == str:
-          to_send = data.encode("ascii")
-        else:
-          to_send = data
-
-        print("sending data to client: " + to_send.decode("ascii"))
-        self.client.send(to_send)
-        gc.collect()
-        return True
+        data = self.client.read()
+      except OSError as err: # timeout 
+        pass
       except Exception as err:
-        print("exception when sending data to client:")
-        print(type(err))
+        print("exception when receiving data from client:")
         print(err)
-        self.is_connected = False
+        self.disconnect()
+    else:
+      try:
+        data = self.client.recv(self.buffer_size)
+      except OSError as err: # timeout
+        pass
+      except Exception as err:
+          print("exception when receiving data from client:")
+          print(err)
+          self.disconnect()
+     
+    if self.client.fileno() == -1: 
+      self.is_connected = False 
 
+    if type(data) == bytes:
+      return data.decode("ascii")
+    else:
+      return data
+    
+  def send_data(self, data):
+    if (not self.is_running or self.client == None or not self.is_connected):
       return False 
 
-  def _listen(self):
+    to_send = None
+    if type(data) == str:
+      to_send = data.encode("ascii")
+    else:
+      to_send = data
+
+    #print("sending data to client: " + to_send.decode("ascii"))
+    
     try:
-      while self.is_running:
-        # we wait for a connection, so show a waiting icon...
-        wifi_extended.animate_wifi()
-        self.client, remote_addr = self.sock.accept()
-        wifi_extended.animate_end()
-        self.client.settimeout(.1)
-        self.is_connected = True
-
-        if self.CALLBACK_ON_CONNECT != None or not callable(self.CALLBACK_ON_CONNECT):
-          self.CALLBACK_ON_CONNECT(remote_addr[0])
-
-        lastping = time.ticks_ms()
-        while self.is_running and self.client != None and self.is_connected == True:
-          try:
-            data = None
-            if badgehelper.on_badge():
-              data = client.read().decode("ascii")
-            else:
-              data = self.client.recv(self.buffer_size).decode("ascii")
-
-            if (not data or len(data) == 0) and self.client.fileno() == -1: break
-
-            if data and len(data) > 0:
-              if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
-                continue
-
-              self.CALLBACK_ON_DATA(data)
-          
-          except OSError as err: # timeout 
-            pass
-          except Exception as err:
-            print("exception when receiving data from client:")
-            print(err)
-            self.is_connected = False
-            break
-        
-          time.sleep(.1)
-          gc.collect()
-
-          cur_ticks = time.ticks_ms()
-          diff_ticks = cur_ticks - lastping
-          if diff_ticks > 30000: # Every 30 seconds we ping / pong 
-            try:
-              self.send_data("ping")
-            except Exception as err:
-              if not self.is_connected:
-                break
-            lastping = cur_ticks
-
-        gc.collect()
-
-        if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
-          self.CALLBACK_ON_DISCONNECT(remote_addr[0])
-
-        self.client.close()
-        self.client = None
-        self.is_connected = False
-      pass
-    except Exception as err:
-      print("FATAL ERROR: ")
+      if badgehelper.on_badge():
+        self.client.write(to_send)
+      else:
+        self.client.send(to_send)
+      return True 
+    except OSError as err: # Timeout
+      print("Timeout exception when sending data to client:")
+      print(type(err))
       print(err)
-      pass 
+      self.is_connected = False
+      return False 
+    except Exception as err:
+      print("exception when sending data to client:")
+      print(type(err))
+      print(err)
+      self.is_connected = False
+      return False 
 
 
+  def _listen(self):
+    self.wait_for_connection()    
+
+    if self.CALLBACK_ON_CONNECT != None and callable(self.CALLBACK_ON_CONNECT):
+      self.CALLBACK_ON_CONNECT(remote_addr[0])
+
+    while self.is_running and self.is_connected:
+      time.sleep(.1)
+      gc.collect()
+     
+      data = self.read_data()
+
+      if not data:
+        continue      
+
+      if len(data) > 0 and not self.CALLBACK_ON_DATA == None and callable(self.CALLBACK_ON_DATA):
+        #print("got data from client: " + data.decode("ascii"))
+        self.CALLBACK_ON_DATA(data.decode("ascii"))
+
+    if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
+      self.CALLBACK_ON_DISCONNECT(remote_addr[0])
+
+    self.disconnect()
 
 class GameClient:
   """Simple Game TCP client with 3 events"""
@@ -208,6 +224,7 @@ class GameClient:
     self.network_switcher = NetworkSwitcher()
     self.network_type = GAME_CLIENT_NETWORK_TYPE_NORMAL
     self.buffer_size = BUFFER_SIZE
+    self.use_listener = False
 
     # Callbacks 
     self.CALLBACK_ON_CONNECT = None 
@@ -219,8 +236,6 @@ class GameClient:
     pass
 
   def start(self, ip_address):
-    gc.enable()
-
     if (ip_address is None or ip_address == "" or len(ip_address) < 7):
       return False 
 
@@ -230,17 +245,50 @@ class GameClient:
 
     self.ip_address = ip_address
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.sock.settimeout(.1)
-    
-    if badgehelper.on_badge():
-      self.connect_thread = thread.start_new_thread("client_connect_thread", self._client_handler, ())
-    else:
-      self.connect_thread = thread.start_new_thread(self._client_handler, ())
+    self.sock.settimeout(.3)
     self.is_running = True 
+    
+    if self.use_listener:
+      if badgehelper.on_badge():
+        self.connect_thread = thread.start_new_thread("client_connect_thread", self._client_handler, ())
+      else:
+        self.connect_thread = thread.start_new_thread(self._client_handler, ())
 
   def stop(self):
     self.is_running = False
     pass
+    
+  def disconnect(self):
+    if self.sock:
+      self.sock.close()
+      self.sock = None
+      self.is_connected = False
+
+  def wait_for_connection(self):
+    # we wait for a connection, so show a waiting icon...
+    if self.is_connected:
+      return True 
+
+    while not self.is_connected:
+      time.sleep(.1)
+      try:
+        wifi_extended.animate_wifi()
+        self.sock.connect((self.ip_address, self.port))
+        wifi_extended.animate_end()
+        self.is_connected = True
+        return True 
+      except:
+        pass
+        
+      if not self.is_connected:
+        # we should wait 10 seconds before going further 
+        connect_ticks = time.ticks_ms()
+        print("Could not connect. Waiting...")
+        while True:
+          time.sleep(.1)
+          diff_ticks = time.ticks_ms() - connect_ticks
+          if diff_ticks > 10000: # Every 10 seconds we try again
+            continue
 
   def register_on_connect(self, action = None):
     self.CALLBACK_ON_CONNECT = action
@@ -255,101 +303,73 @@ class GameClient:
     return True
 
   def send_data(self, data):
-    if (self.is_running and self.is_connected == True):
-      try:
-        to_send = None
-        if type(data) == str:
-          to_send = data.encode("ascii")
-        else:
-          to_send = data 
+    if (not self.is_running or not self.is_connected):
+      return False 
 
-        print("sending data to server: " + to_send.decode("ascii"))
-        self.sock.send(to_send)
-        gc.collect()
-      except OSError as err: # also a timeout
-        return False 
-      except:
-        return False 
+    to_send = None
+    if type(data) == str:
+      to_send = data.encode("ascii")
+    else:
+      to_send = data 
+
+    #print("sending data to server: " + to_send.decode("ascii"))
+    try:
+      self.sock.send(to_send)
+      return True
+    except OSError as err: # also a timeout
+      return False 
+    except Exception as err:
+      return False 
+
+
+  def read_data(self):
+    data = []
+
+    if not self.is_connected or not self.is_running:
+      return data
+
+    if badgehelper.on_badge() and 1 == 0:
+      try:
+        data = self.sock.read()
+      except OSError as err: # timeout 
+        pass
+      except Exception as err:
+        print("exception when receiving data from host:")
+        print(err)
+        self.disconnect()
+    else:
+      try:
+        data = self.sock.recv(self.buffer_size)
+      except OSError as err: # timeout
+        pass
+      except Exception as err:
+          print("exception when receiving data from host:")
+          print(err)
+          self.disconnect()
+    
+    if self.sock.fileno() == -1: 
+      self.is_connected = False 
+
+    if type(data) == bytes:
+      return data.decode("ascii")
+    else:
+      return data
 
   def _client_handler(self):
-    try:
-      while self.is_running:
+    while self.is_running and not self.is_connected:
+      self.wait_for_connection()
       
-        # Setup connection, if needed
-        try:
-          if not self.is_connected == True:
-            wifi_extended.animate_wifi()
-            print("Connecting with " + self.ip_address + "...")
-            self.sock.connect((self.ip_address, self.port))
-            wifi_extended.animate_end()
-            self.is_connected = True
+      if self.CALLBACK_ON_CONNECT != None and callable(self.CALLBACK_ON_CONNECT):
+        self.CALLBACK_ON_CONNECT(remote_addr[0])
+    
+    print("Connected to host: " + self.ip_address)
+    while self.is_running and self.is_connected == True:
+      data = self.read_data()
+     
+      if data and len(data) > 0 and not self.CALLBACK_ON_DATA == None and callable(self.CALLBACK_ON_DATA):
+        self.CALLBACK_ON_DATA(data.decode("ascii"))
 
-            if self.CALLBACK_ON_CONNECT != None and callable(self.CALLBACK_ON_CONNECT):
-              self.CALLBACK_ON_CONNECT(self.ip_address)
-
-        except Exception as err:
-          # we should wait 10 seconds before going further 
-          connect_ticks = time.ticks_ms()
-          while True:
-            diff_ticks = time.ticks_ms() - connect_ticks
-            if diff_ticks > 10000: # Every 10 seconds we try again
-                continue
-
-        lastping = time.ticks_ms()
-        while self.is_running and self.is_connected == True:
-          try:
-            data = None
-            if badgehelper.on_badge():
-              data = self.sock.read().decode("ascii")
-            else:
-              data = self.sock.recv(self.buffer_size).decode("ascii")
-
-            gc.collect()
-            if not data:
-              break
-
-            if (not data or len(data) == 0) and self.sock.fileno() == -1: break
-
-            if data and len(data) > 0:
-              if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
-                continue
-              
-              self.CALLBACK_ON_DATA(data)
-              pass
-
-          except OSError as err:
-            pass
-          except:
-            break
-        
-          time.sleep(.1)
-          gc.collect()
-
-          cur_ticks = time.ticks_ms()
-          diff_ticks = cur_ticks - lastping
-          if diff_ticks > 30000: # Every 30 seconds we ping / pong 
-            try:
-              self.send_data("ping")
-            except Exception as err:
-              break
-            lastping = cur_ticks
-
-        gc.collect()
-        self.is_running = False 
-        self.is_connected = False 
-        if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
-          self.CALLBACK_ON_DISCONNECT(self.ip_address)
-
-      try:
-        self.sock.shutdown(socket.SHUT_RDWR)
-        self.sock.close()
-        gc.collect()
-      except:
-        pass
-
-      pass
-    except Exception as err:
-      print("FATAL ERROR: ")
-      print(type(err))
-      print(err)
-      pass
+    self.is_running = False 
+    self.is_connected = False 
+    if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
+      self.CALLBACK_ON_DISCONNECT(self.ip_address)
