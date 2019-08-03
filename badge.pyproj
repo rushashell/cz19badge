@@ -22,6 +22,9 @@
     <Compile Include="clienttest\__init__.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
+    <Compile Include="tetris_cz19\badgehelper.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tetris_cz19\gameservices.py" />
     <Compile Include="tetris_cz19\menu.py" />
     <Compile Include="tetris_cz19\tetris.py" />

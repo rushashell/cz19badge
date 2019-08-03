@@ -1,7 +1,5 @@
 import sys, time, gc
-import gameservices
-
-ON_BADGE = "wifi" in sys.modules 
+import gameservices, badgehelper
 
 try:
   import thread

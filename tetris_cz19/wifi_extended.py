@@ -1,12 +1,10 @@
-import sys
+import sys, badgehelper
 
-ON_BADGE = "wifi" in sys.modules 
-
-if ON_BADGE:
+if badgehelper.on_badge():
   import wifi, network, rgb, uinterface
 
 def animate_wifi():
-  if not ON_BADGE:
+  if not badgehelper.on_badge():
     return False 
 
   from default_icons import animation_connecting_wifi
@@ -17,7 +15,7 @@ def animate_wifi():
   rgb.gif(data, (12, 0), size, frames)
 
 def animate_no_wifi():
-  if not ON_BADGE:
+  if not badgehelper.on_badge():
     return False 
   
   from default_icons import icon_no_wifi
@@ -29,12 +27,12 @@ def animate_no_wifi():
   time.sleep(3)
 
 def animate_end():
-  if not ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.framerate(20)
 
 def hotspot_setup(ssid, channel, hidden, password, authmode):
-  if not ON_BADGE:
+  if not badgehelper.on_badge():
     return False
 
   sta_if = network.WLAN(network.STA_IF)
@@ -51,7 +49,7 @@ def hotspot_setup(ssid, channel, hidden, password, authmode):
   return True 
 
 def hotspot_connect(ssid, password):
-  if not ON_BADGE:
+  if not badgehelper.on_badge():
     return False
 
   sta_if = network.WLAN(network.STA_IF)
@@ -73,4 +71,4 @@ def hotspot_connect(ssid, password):
 
     animate_end()
 
-  return wifi.status()   
+  return wifi.status()

@@ -1,6 +1,4 @@
-import sys, time, gc, wifi_extended
-
-ON_BADGE = "wifi" in sys.modules 
+import sys, time, gc, wifi_extended, badgehelper
 
 try:
   import thread
@@ -17,17 +15,10 @@ try:
 except ImportError:
   import urandom as random
 
-if ON_BADGE:
+if badgehelper.on_badge():
   import wifi, consts, network, uinterface
 
-if (not hasattr("time", "ticks_ms")):
-  try:
-    time.ticks_ms = lambda: int(round(time.time() * 1000))
-  except:
-    pass
-
 PORT = 55667        # Port to listen on (non-privileged ports are > 1023)
-EOF = '\x04abcd'
 
 GAME_HOST_NETWORK_TYPE_NORMAL = 0
 GAME_HOST_NETWORK_TYPE_HOTSPOT = 1
@@ -45,7 +36,7 @@ BUFFER_SIZE = 64
 
 class NetworkSwitcher:
   def switch(self, type):
-    if not ON_BADGE:
+    if not badgehelper.on_badge():
       return True
 
     if type == GAME_HOST_NETWORK_TYPE_NORMAL or type == GAME_CLIENT_NETWORK_TYPE_NORMAL:
@@ -94,7 +85,7 @@ class GameHost:
     self.sock.listen(1) # Only allow one single connection at a time
     #self.sock.settimeout(None)
     
-    if ON_BADGE:
+    if badgehelper.on_badge():
       self.listen_thread = thread.start_new_thread("listen_thread", self._listen, ())
     else:
       self.listen_thread = thread.start_new_thread(self._listen, ())
@@ -139,8 +130,6 @@ class GameHost:
       return False 
 
   def _listen(self):
-    global EOF
-    
     try:
       while self.is_running:
         # we wait for a connection, so show a waiting icon...
@@ -157,7 +146,7 @@ class GameHost:
         while self.is_running and self.client != None and self.is_connected == True:
           try:
             data = None
-            if ON_BADGE:
+            if badgehelper.on_badge():
               data = client.read().decode("ascii")
             else:
               data = self.client.recv(self.buffer_size).decode("ascii")
@@ -167,9 +156,6 @@ class GameHost:
             if data and len(data) > 0:
               if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
                 continue
-              
-              if data.endswith(EOF):
-                data = data.replace(EOF, "", 1)
 
               self.CALLBACK_ON_DATA(data)
           
@@ -246,7 +232,7 @@ class GameClient:
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.sock.settimeout(.1)
     
-    if ON_BADGE:
+    if badgehelper.on_badge():
       self.connect_thread = thread.start_new_thread("client_connect_thread", self._client_handler, ())
     else:
       self.connect_thread = thread.start_new_thread(self._client_handler, ())
@@ -269,8 +255,6 @@ class GameClient:
     return True
 
   def send_data(self, data):
-    global EOF
-
     if (self.is_running and self.is_connected == True):
       try:
         to_send = None
@@ -295,6 +279,7 @@ class GameClient:
         try:
           if not self.is_connected == True:
             wifi_extended.animate_wifi()
+            print("Connecting with " + self.ip_address + "...")
             self.sock.connect((self.ip_address, self.port))
             wifi_extended.animate_end()
             self.is_connected = True
@@ -314,7 +299,7 @@ class GameClient:
         while self.is_running and self.is_connected == True:
           try:
             data = None
-            if ON_BADGE:
+            if badgehelper.on_badge():
               data = self.sock.read().decode("ascii")
             else:
               data = self.sock.recv(self.buffer_size).decode("ascii")
@@ -329,9 +314,6 @@ class GameClient:
               if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
                 continue
               
-              if data.endswith(EOF):
-                data = data.replace(EOF, "", 1)
-
               self.CALLBACK_ON_DATA(data)
               pass
 

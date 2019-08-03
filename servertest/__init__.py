@@ -6,12 +6,11 @@ sys.path.append("/apps/" + BASE_MODULE)
 sys.path.append("/apps/tetris_cz19")
 sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
-ON_BADGE = "wifi" in sys.modules 
-
-if ON_BADGE:
-  import rgb
-
+import badgehelper
 import gameservices, tetrisgameservices
+
+if badgehelper.on_badge():
+  import rgb
 
 DEBUG = False
 connected = False
@@ -21,7 +20,7 @@ def host_on_connect(addr):
   global connected
   connected = True
   print("(host) connected:" + addr)
-  if ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.scrolltext("(host) client connected: " + addr, (255,255,255)) 
 
@@ -29,7 +28,7 @@ def host_on_disconnect(addr):
   global connected
   connected = False
   print("(host) disconnected:" + addr)
-  if ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.scrolltext("(host) client disconnected: " + addr, (255,255,255)) 
 
@@ -37,13 +36,13 @@ def host_on_row():
   global received_rows
   print("(host) row added")
   received_rows += received_rows
-  if ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.scrolltext("(host) received row " + str(received_rows), (255,255,255)) 
 
 def host_on_gameover():
   print("(host) gameover")
-  if ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.scrolltext("(host) received gameover", (255,255,255)) 
 
@@ -65,7 +64,7 @@ server.register_on_disconnect(host_on_disconnect)
 server.register_on_row(host_on_row)
 server.register_on_gameover(host_on_gameover)
 
-if DEBUG == True or not ON_BADGE:
+if DEBUG == True or not badgehelper.on_badge():
   server.network_type = gameservices.GAME_HOST_NETWORK_TYPE_NORMAL
 else:
   print("on the badge")
@@ -73,7 +72,7 @@ else:
 
 server.start()
 
-if ON_BADGE:
+if badgehelper.on_badge():
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("(host) running...", (255,255,255))
@@ -84,19 +83,13 @@ if ON_BADGE:
 
 print("(host) running...")
 
-if (not hasattr("time", "ticks_ms")):
-  try:
-    time.ticks_ms = lambda: int(round(time.time() * 1000))
-  except:
-    pass
-
 row_send = 0
 lastping = time.ticks_ms()
 
 while True:
   time.sleep(0.1)
 
-  if connected and not "rgb" in sys.modules:
+  if connected and not badgehelper.on_badge():
     cur_ticks = time.ticks_ms()
     diff_ticks = cur_ticks - lastping
     if diff_ticks > 10000:

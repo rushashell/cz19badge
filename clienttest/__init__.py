@@ -6,20 +6,20 @@ sys.path.append("/apps/" + BASE_MODULE)
 sys.path.append("/apps/tetris_cz19")
 sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
-DEBUG = False
+import badgehelper
+
+DEBUG = True
 connected = False 
 received_rows = 0
-ON_BADGE = "wifi" in sys.modules 
 
-if ON_BADGE:
+if badgehelper.on_badge():
   import rgb
 
 import gameservices
 import tetrisgameservices
 
-
 def show_scrolltext(text):
-  if ON_BADGE:
+  if badgehelper.on_badge():
     rgb.clear()
     rgb.scrolltext(text, (255,255,255))
 
@@ -64,11 +64,12 @@ client.register_on_row(client_on_row)
 client.register_on_gameover(client_on_gameover)
  
 # TEMPORARY
-if DEBUG == True or not ON_BADGE:
+if DEBUG == True or not badgehelper.on_badge():
   client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_NORMAL
   
-  if ON_BADGE:
+  if badgehelper.on_badge():
     # Running on badge, so connect to PDW
+    print("Connecting with 204.2.68.199...")
     client.start("204.2.68.199")
   else:
     # Running in debug mode on PDW, connect to badge
@@ -77,7 +78,7 @@ else:
   client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT 
   client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
 
-if ON_BADGE:
+if badgehelper.on_badge():
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("Running...", (255,255,255))
