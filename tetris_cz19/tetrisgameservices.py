@@ -1,6 +1,8 @@
 import sys, time, gc
 import gameservices
 
+ON_BADGE = "wifi" in sys.modules 
+
 try:
   import thread
 except ImportError:
@@ -69,8 +71,10 @@ class TetrisGameHost:
       return True
     if ((data == "row" or data == "row\r\n" or data == "'row'" or data == "'row\\r\\n'") and self.CALLBACK_ON_ROW != None):
       self.CALLBACK_ON_ROW()
+      return True
     if ((data == "gameover" or data == "gameover\r\n"  or data == "'gameover'" or data == "'gameover\\r\\n'") and self.CALLBACK_ON_ROW != None):
       self.CALLBACK_ON_GAMEOVER()
+      return True
 
 
 class TetrisGameClient:
@@ -119,19 +123,21 @@ class TetrisGameClient:
     self.game_client.send_data("gameover")
 
   def _callback_on_connect(self, addr):
-    if (self.CALLBACK_ON_CONNECT != None):
+    if self.CALLBACK_ON_CONNECT != None and callable(self.CALLBACK_ON_CONNECT):
       self.CALLBACK_ON_CONNECT(addr)
 
   def _callback_on_disconnect(self, addr):
-    if (self.CALLBACK_ON_DISCONNECT != None):
+    if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
       self.CALLBACK_ON_DISCONNECT(addr)
 
   def _callback_on_data(self, data):
     if (data == "ping"):
       return True
 
-    if ((data == "row" or data == "row\r\n" or data == "'row'" or data == "'row\\r\\n'") and self.CALLBACK_ON_ROW != None):
+    if ((data == "row" or data == "row\r\n" or data == "'row'" or data == "'row\\r\\n'") and self.CALLBACK_ON_ROW != None and callable(self.CALLBACK_ON_ROW)):
       self.CALLBACK_ON_ROW()
+      return True
 
-    if ((data == "gameover" or data == "gameover\r\n" or data == "'gameover'" or data == "'gameover\\r\\n'") and self.CALLBACK_ON_GAMEOVER != None):
+    if ((data == "gameover" or data == "gameover\r\n" or data == "'gameover'" or data == "'gameover\\r\\n'") and self.CALLBACK_ON_GAMEOVER != None and callable(self.CALLBACK_ON_GAMEOVER)):
       self.CALLBACK_ON_GAMEOVER()
+      return True

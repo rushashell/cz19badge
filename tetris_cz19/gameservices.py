@@ -1,5 +1,7 @@
 import sys, time, gc, wifi_extended
 
+ON_BADGE = "wifi" in sys.modules 
+
 try:
   import thread
 except ImportError:
@@ -11,29 +13,12 @@ except ImportError:
   import _socket as socket
 
 try:
-  import wifi
-except ImportError:
-  pass
-
-try:
-  import consts
-except ImportError:
-  pass
-
-try:
-  import network
-except:
-  pass
-
-try:
-  import uinterface
-except ImportError:
-  pass
-
-try:
   import random
 except ImportError:
   import urandom as random
+
+if ON_BADGE:
+  import wifi, consts, network, uinterface
 
 if (not hasattr("time", "ticks_ms")):
   try:
@@ -49,7 +34,7 @@ GAME_HOST_NETWORK_TYPE_HOTSPOT = 1
 GAME_CLIENT_NETWORK_TYPE_NORMAL = 10
 GAME_CLIENT_NETWORK_TYPE_HOTSPOT = 11
 
-GAME_NETWORK_TYPE_HOTSPOT_SSID = "TetrisCZ19"
+GAME_NETWORK_TYPE_HOTSPOT_SSID = "AbC_MPCZ19"
 GAME_NETWORK_TYPE_HOTSPOT_PASSWD = "Ajk39128asdaD"
 GAME_NETWORK_TYPE_HOTSPOT_CHANNEL = 11 
 GAME_NETWORK_TYPE_HOTSPOT_HIDDEN = False
@@ -60,7 +45,7 @@ BUFFER_SIZE = 64
 
 class NetworkSwitcher:
   def switch(self, type):
-    if not "wifi" in sys.modules or not "uinterface" in sys.modules:
+    if not ON_BADGE:
       return True
 
     if type == GAME_HOST_NETWORK_TYPE_NORMAL or type == GAME_CLIENT_NETWORK_TYPE_NORMAL:
@@ -96,6 +81,8 @@ class GameHost:
     pass
 
   def start(self):
+    gc.enable()
+
     switched = self.network_switcher.switch(self.network_type)
     if not switched:
       return False 
@@ -107,8 +94,7 @@ class GameHost:
     self.sock.listen(1) # Only allow one single connection at a time
     #self.sock.settimeout(None)
     
-
-    if "wifi" in sys.modules:
+    if ON_BADGE:
       self.listen_thread = thread.start_new_thread("listen_thread", self._listen, ())
     else:
       self.listen_thread = thread.start_new_thread(self._listen, ())
@@ -132,26 +118,25 @@ class GameHost:
     return True
 
   def send_data(self, data):
-    global EOF
-
     if (self.is_running and self.client != None and self.is_connected == True):
       try:
-        to_send = data
+        to_send = None
         if type(data) == str:
           to_send = data.encode("ascii")
-
-        if len(to_send) > 0 and data[len(to_send)-1] != EOF:
-          to_send.append(EOF)
+        else:
+          to_send = data
 
         print("sending data to client: " + to_send.decode("ascii"))
         self.client.send(to_send)
+        gc.collect()
         return True
       except Exception as err:
-        if type(err) == ConnectionAbortedError:
-          self.is_connected = False 
-        if type(err) == ConnectionResetError:
-          self.is_connected = False
-        return False 
+        print("exception when sending data to client:")
+        print(type(err))
+        print(err)
+        self.is_connected = False
+
+      return False 
 
   def _listen(self):
     global EOF
@@ -164,17 +149,23 @@ class GameHost:
         wifi_extended.animate_end()
         self.client.settimeout(.1)
         self.is_connected = True
-        if (self.CALLBACK_ON_CONNECT != None):
+
+        if self.CALLBACK_ON_CONNECT != None or not callable(self.CALLBACK_ON_CONNECT):
           self.CALLBACK_ON_CONNECT(remote_addr[0])
 
         lastping = time.ticks_ms()
         while self.is_running and self.client != None and self.is_connected == True:
           try:
-            data = self.client.recv(this.buffer_size).decode("ascii")
+            data = None
+            if ON_BADGE:
+              data = client.read().decode("ascii")
+            else:
+              data = self.client.recv(self.buffer_size).decode("ascii")
+
             if (not data or len(data) == 0) and self.client.fileno() == -1: break
 
             if data and len(data) > 0:
-              if (self.CALLBACK_ON_DATA == None):
+              if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
                 continue
               
               if data.endswith(EOF):
@@ -182,28 +173,30 @@ class GameHost:
 
               self.CALLBACK_ON_DATA(data)
           
-          except OSError as err:
+          except OSError as err: # timeout 
             pass
           except Exception as err:
-            if type(err) == ConnectionAbortedError:
-              self.is_connected = False 
-              break
-            pass
+            print("exception when receiving data from client:")
+            print(err)
+            self.is_connected = False
+            break
         
           time.sleep(.1)
+          gc.collect()
 
           cur_ticks = time.ticks_ms()
           diff_ticks = cur_ticks - lastping
-          if diff_ticks > 30000: # Every 10 seconds we ping / pong 
+          if diff_ticks > 30000: # Every 30 seconds we ping / pong 
             try:
               self.send_data("ping")
-              gc.collect()
             except Exception as err:
               if not self.is_connected:
                 break
             lastping = cur_ticks
 
-        if (self.CALLBACK_ON_DISCONNECT != None):
+        gc.collect()
+
+        if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
           self.CALLBACK_ON_DISCONNECT(remote_addr[0])
 
         self.client.close()
@@ -211,8 +204,11 @@ class GameHost:
         self.is_connected = False
       pass
     except Exception as err:
-      print("FATAL ERROR: " + str(err))
+      print("FATAL ERROR: ")
+      print(err)
       pass 
+
+
 
 class GameClient:
   """Simple Game TCP client with 3 events"""
@@ -237,6 +233,8 @@ class GameClient:
     pass
 
   def start(self, ip_address):
+    gc.enable()
+
     if (ip_address is None or ip_address == "" or len(ip_address) < 7):
       return False 
 
@@ -246,9 +244,9 @@ class GameClient:
 
     self.ip_address = ip_address
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.sock.settimeout(0.1)
+    self.sock.settimeout(.1)
     
-    if "wifi" in sys.modules:
+    if ON_BADGE:
       self.connect_thread = thread.start_new_thread("client_connect_thread", self._client_handler, ())
     else:
       self.connect_thread = thread.start_new_thread(self._client_handler, ())
@@ -275,15 +273,15 @@ class GameClient:
 
     if (self.is_running and self.is_connected == True):
       try:
-        to_send = data
+        to_send = None
         if type(data) == str:
           to_send = data.encode("ascii")
-
-        if len(to_send) > 0 and data[len(to_send)-1] != EOF:
-          to_send.append(EOF)
+        else:
+          to_send = data 
 
         print("sending data to server: " + to_send.decode("ascii"))
         self.sock.send(to_send)
+        gc.collect()
       except OSError as err: # also a timeout
         return False 
       except:
@@ -300,7 +298,8 @@ class GameClient:
             self.sock.connect((self.ip_address, self.port))
             wifi_extended.animate_end()
             self.is_connected = True
-            if (self.CALLBACK_ON_CONNECT != None):
+
+            if self.CALLBACK_ON_CONNECT != None and callable(self.CALLBACK_ON_CONNECT):
               self.CALLBACK_ON_CONNECT(self.ip_address)
 
         except Exception as err:
@@ -314,14 +313,20 @@ class GameClient:
         lastping = time.ticks_ms()
         while self.is_running and self.is_connected == True:
           try:
-            data = self.sock.recv(self.buffer_size).decode("ascii")
+            data = None
+            if ON_BADGE:
+              data = self.sock.read().decode("ascii")
+            else:
+              data = self.sock.recv(self.buffer_size).decode("ascii")
+
+            gc.collect()
             if not data:
               break
 
             if (not data or len(data) == 0) and self.sock.fileno() == -1: break
 
             if data and len(data) > 0:
-              if (self.CALLBACK_ON_DATA == None):
+              if self.CALLBACK_ON_DATA == None or not callable(self.CALLBACK_ON_DATA):
                 continue
               
               if data.endswith(EOF):
@@ -336,29 +341,33 @@ class GameClient:
             break
         
           time.sleep(.1)
+          gc.collect()
 
           cur_ticks = time.ticks_ms()
           diff_ticks = cur_ticks - lastping
           if diff_ticks > 30000: # Every 30 seconds we ping / pong 
             try:
               self.send_data("ping")
-              gc.collect()
             except Exception as err:
               break
             lastping = cur_ticks
 
+        gc.collect()
         self.is_running = False 
         self.is_connected = False 
-        if (self.CALLBACK_ON_DISCONNECT != None):
+        if self.CALLBACK_ON_DISCONNECT != None and callable(self.CALLBACK_ON_DISCONNECT):
           self.CALLBACK_ON_DISCONNECT(self.ip_address)
 
       try:
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
+        gc.collect()
       except:
         pass
 
       pass
     except Exception as err:
-      print("FATAL ERROR: " + str(err))
+      print("FATAL ERROR: ")
+      print(type(err))
+      print(err)
       pass

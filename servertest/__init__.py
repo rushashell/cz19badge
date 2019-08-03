@@ -6,10 +6,10 @@ sys.path.append("/apps/" + BASE_MODULE)
 sys.path.append("/apps/tetris_cz19")
 sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 
-try:
+ON_BADGE = "wifi" in sys.modules 
+
+if ON_BADGE:
   import rgb
-except ImportError:
-  pass
 
 import gameservices, tetrisgameservices
 
@@ -21,7 +21,7 @@ def host_on_connect(addr):
   global connected
   connected = True
   print("(host) connected:" + addr)
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     rgb.clear()
     rgb.scrolltext("(host) client connected: " + addr, (255,255,255)) 
 
@@ -29,7 +29,7 @@ def host_on_disconnect(addr):
   global connected
   connected = False
   print("(host) disconnected:" + addr)
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     rgb.clear()
     rgb.scrolltext("(host) client disconnected: " + addr, (255,255,255)) 
 
@@ -37,13 +37,13 @@ def host_on_row():
   global received_rows
   print("(host) row added")
   received_rows += received_rows
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     rgb.clear()
     rgb.scrolltext("(host) received row " + str(received_rows), (255,255,255)) 
 
 def host_on_gameover():
   print("(host) gameover")
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     rgb.clear()
     rgb.scrolltext("(host) received gameover", (255,255,255)) 
 
@@ -65,7 +65,7 @@ server.register_on_disconnect(host_on_disconnect)
 server.register_on_row(host_on_row)
 server.register_on_gameover(host_on_gameover)
 
-if DEBUG == True or not "rgb" in sys.modules:
+if DEBUG == True or not ON_BADGE:
   server.network_type = gameservices.GAME_HOST_NETWORK_TYPE_NORMAL
 else:
   print("on the badge")
@@ -73,12 +73,11 @@ else:
 
 server.start()
 
-if "rgb" in sys.modules:
+if ON_BADGE:
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("(host) running...", (255,255,255))
 
-if "buttons" in sys.modules:
   import buttons, defines
   buttons.register(defines.BTN_LEFT, on_left)
   buttons.register(defines.BTN_RIGHT, on_right)

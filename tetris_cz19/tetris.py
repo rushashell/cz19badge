@@ -3,7 +3,7 @@ import urandom
 import rgb
 import gameservices
 import tetrisgameservices
-
+import gc
 
 # Basic implementation of tetris, adapted to CZ19 badge
 
@@ -184,6 +184,12 @@ class Tetris:
       else:
         self.client.send_row_added()
 
+    def multiplayer_send_gameover(self):
+      if self.role=="host":
+        self.host.send_gameover()
+      else:
+        self.client.send_gameover()
+
     def network_init(self):
       if self.role=="host":
         self.host=tetrisgameservices.TetrisGameHost()
@@ -220,7 +226,6 @@ class Tetris:
         self.score = 0
         self.game_blockedlines = 0
 
-
     def spawn_new_piece(self):
         self.piece_current = self.piece_next
         urandom.seed(time.ticks_ms())
@@ -232,6 +237,7 @@ class Tetris:
         # print("Piece:",self.piece_current)
 
     def game_update(self):
+        gc.collect()
         if self.receive_row > 0:
           self.receive_row-=1
           self.add_line()
@@ -479,6 +485,7 @@ class Tetris:
     def do_game_over(self):
         if self.mode=="multiplayer":
           print("Send gameover")
+          self.multiplayer_send_gameover()
         rgb.enablecomp()
         rgb.clear()
         rgb.scrolltext("game over")

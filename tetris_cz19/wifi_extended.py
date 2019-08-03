@@ -1,27 +1,12 @@
 import sys
 
-try:
-  import wifi
-except ImportError:
-  pass
+ON_BADGE = "wifi" in sys.modules 
 
-try:
-  import network
-except:
-  pass
-
-try:
-  import rgb
-except:
-  pass
-
-try:
-  import uinterface
-except ImportError:
-  pass
+if ON_BADGE:
+  import wifi, network, rgb, uinterface
 
 def animate_wifi():
-  if not "rgb" in sys.modules:
+  if not ON_BADGE:
     return False 
 
   from default_icons import animation_connecting_wifi
@@ -32,7 +17,7 @@ def animate_wifi():
   rgb.gif(data, (12, 0), size, frames)
 
 def animate_no_wifi():
-  if not "rgb" in sys.modules:
+  if not ON_BADGE:
     return False 
   
   from default_icons import icon_no_wifi
@@ -44,12 +29,12 @@ def animate_no_wifi():
   time.sleep(3)
 
 def animate_end():
-  if "rgb" in sys.modules:
+  if not ON_BADGE:
     rgb.clear()
     rgb.framerate(20)
 
 def hotspot_setup(ssid, channel, hidden, password, authmode):
-  if not "wifi" in sys.modules:
+  if not ON_BADGE:
     return False
 
   sta_if = network.WLAN(network.STA_IF)
@@ -66,7 +51,7 @@ def hotspot_setup(ssid, channel, hidden, password, authmode):
   return True 
 
 def hotspot_connect(ssid, password):
-  if not "wifi" in sys.modules:
+  if not ON_BADGE:
     return False
 
   sta_if = network.WLAN(network.STA_IF)

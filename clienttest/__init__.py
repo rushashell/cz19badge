@@ -9,18 +9,17 @@ sys.path.append("H:\\CZ2019\\badge\\tetris_cz19")
 DEBUG = False
 connected = False 
 received_rows = 0
+ON_BADGE = "wifi" in sys.modules 
 
-try:
+if ON_BADGE:
   import rgb
-except ImportError:
-  pass
 
 import gameservices
 import tetrisgameservices
 
 
 def show_scrolltext(text):
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     rgb.clear()
     rgb.scrolltext(text, (255,255,255))
 
@@ -65,10 +64,10 @@ client.register_on_row(client_on_row)
 client.register_on_gameover(client_on_gameover)
  
 # TEMPORARY
-if DEBUG == True or not "rgb" in sys.modules:
+if DEBUG == True or not ON_BADGE:
   client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_NORMAL
   
-  if "rgb" in sys.modules:
+  if ON_BADGE:
     # Running on badge, so connect to PDW
     client.start("204.2.68.199")
   else:
@@ -78,17 +77,16 @@ else:
   client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT 
   client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
 
-if "rgb" in sys.modules:
+if ON_BADGE:
   rgb.clear()
   rgb.background((0,0,0))
   rgb.scrolltext("Running...", (255,255,255))
-else:
-  print("Running...")
 
-if "buttons" in sys.modules:
   import buttons, defines
   buttons.register(defines.BTN_LEFT, on_left)
   buttons.register(defines.BTN_RIGHT, on_right)
+else:
+  print("Running...")
 
 while True:
   time.sleep(0.1)
