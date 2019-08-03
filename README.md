@@ -1,6 +1,9 @@
 # cz19badge
 Project to collaborate on tetris for CZ19
 
+## Thanks
+Special thanks goes to to EWS99 and AbC.
+
 ## Links
 
 ### Hatchery, CZ19 uploaded projects
@@ -17,3 +20,6 @@ https://github.com/wendlers/mpfshell
 
 ### The sourcecode/firmware of the event badge
 https://github.com/badgeteam/new-esp32-firmware/tree/master/firmware/python_modules/campzone2019
+
+### Possible Stack Trace decoder for ESP8266 
+https://github.com/littleyoda/EspStackTraceDecoder
