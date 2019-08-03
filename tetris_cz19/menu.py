@@ -15,6 +15,10 @@ class TetrisMenu():
     self.menu = self._menu_multiplayer
     return self.menu()
 
+  def hostsettings(self):
+    self.menu = self._menu_hostsettings
+    return self.menu()
+
   def _menu_main(self):
     items = ["Single player","Multiplayer"]
     choices = ["singleplayer","multiplayer"]
@@ -27,3 +31,8 @@ class TetrisMenu():
     choice = uinterface.menu(items)
     return choices[choice]
 
+  def _menu_hostsettings(self):
+    items = ["Survivor","Random lines"]
+    choices = ["survivor","randomlines"]
+    choice = uinterface.menu(items)
+    return choices[choices]

@@ -25,6 +25,8 @@ class Tetris:
         self.game_width = 8 
         self.game_height = self.board_width - 5 
         self.game_blockedlines = 0
+        self.game_won = False
+        self.game_over = False
         self.receive_row = 0
         # self.game_height = 10
         # self.game_color_piece = defs.white
@@ -109,7 +111,7 @@ class Tetris:
 
     def btn_a(self, button_is_down):
       if button_is_down:
-          # self.rotate_piece()
+          self.rotate_piece()
           #self.add_line()
           pass
 
@@ -147,20 +149,20 @@ class Tetris:
 
     def multiplayer_on_connect(self,addr):
       self.connected = True
-      print("(host) connected:" + addr)
+      #print("(host) connected:" + addr)
 
     def multiplayer_on_disconnect(self,addr):
       self.connected = False
-      print("(host) disconnected:" + addr)
+      #print("(host) disconnected:" + addr)
 
     def multiplayer_on_row(self):
-      print("(host) row added")
+      #print("(host) row added")
       self.receive_row+=1
       # on row
 
     def multiplayer_on_gameover(self):
-      print("(host) gameover")
-      # on gameover
+      #print("received gameover")
+      self.game_won = True
 
     def multiplayer_send_line(self):
       if self.role=="host":
@@ -192,6 +194,8 @@ class Tetris:
     def game_init(self):
         # Init game state
         self.game_step_time = self.game_default_step_time
+        self.game_won = False
+        self.game_over = False
         urandom.seed(time.ticks_ms())
         self.piece_next = urandom.getrandbits(8) % 7
 
@@ -209,15 +213,21 @@ class Tetris:
         if self.mode=="multiplayer":
           self.network_init()
 
-        self.game_init()
-
         while True:
+          self.game_init()
+
+          while not(self.game_won) and not(self.game_over):
             time.sleep(.1)
             self.game_update()
             
             # self.draw()
             if self.mode=="multiplayer":
               self.network_handle_data()            
+          if self.game_won:
+            self.do_game_won()
+          if self.game_over:
+            self.do_game_over()
+          time.sleep(10)
 
     def spawn_new_piece(self):
         self.piece_current = self.piece_next
@@ -343,10 +353,8 @@ class Tetris:
         if collision:
             # if at the top, game over
             if self.piece_y == 1:
+                self.game_over = True
                 self.do_game_over()
-                time.sleep(10)
-                self.game_init()
-                return
 
             # add to field
             self.piece_y -= 1
@@ -373,7 +381,7 @@ class Tetris:
             for column in range(self.game_width):
                 fill_count += self.field[row][column]
             if fill_count == self.game_width:
-                # self.score += 10
+                self.score += 10
                 self.do_line()
                 # Remove line
                 self.remove_line(row)
@@ -467,13 +475,19 @@ class Tetris:
 
     def do_line(self):
         if self.mode=="multiplayer":
-          print("Send line")
           self.multiplayer_send_line()
           time.sleep(.1)
 
+    def do_game_won(self):
+        #print("You won")
+        rgb.enablecomp()
+        rgb.clear()
+        rgb.scrolltext("You won!")
+      
+
     def do_game_over(self):
         if self.mode=="multiplayer":
-          print("Send gameover")
+          # print("Send gameover")
           self.multiplayer_send_gameover()
         rgb.enablecomp()
         rgb.clear()
