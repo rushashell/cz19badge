@@ -25,6 +25,7 @@ class Tetris:
         self.game_width = 8 
         self.game_height = self.board_width - 5 
         self.game_blockedlines = 0
+        self.receive_row = 0
         # self.game_height = 10
         # self.game_color_piece = defs.white
         self.game_color_filledline = defs.blue
@@ -170,7 +171,7 @@ class Tetris:
 
     def multiplayer_on_row(self):
       print("(host) row added")
-      self.add_line()
+      self.row_received()
       # on row
 
     def multiplayer_on_gameover(self):
@@ -201,7 +202,7 @@ class Tetris:
         self.client.network_type = gameservices.GAME_CLIENT_NETWORK_TYPE_HOTSPOT
         self.client.start(gameservices.GAME_NETWORK_TYPE_HOTSPOT_SERVERIP)
       while not(self.connected):
-        time.sleep(0.1)
+        time.sleep(.1)
 
     def game_init(self):
         # Init game state
@@ -231,6 +232,9 @@ class Tetris:
         # print("Piece:",self.piece_current)
 
     def game_update(self):
+        if self.receive_row > 0:
+          self.receive_row-=1
+          self.add_line()
         cur_ticks = time.ticks_ms()
         if cur_ticks - self.last_update > self.game_step_time:
             # Move piece down
@@ -392,6 +396,9 @@ class Tetris:
         if self.game_step_time > 50:
             self.game_step_time = self.game_step_time - self.game_step_speed_increase
 
+    def row_received(self):
+      self.receive_row+=1
+
     def add_line(self):
         for row in range(self.game_height-1):
             for col in range(self.game_width):
@@ -467,6 +474,7 @@ class Tetris:
         if self.mode=="multiplayer":
           print("Send line")
           self.multiplayer_send_line()
+          time.sleep(.1)
 
     def do_game_over(self):
         if self.mode=="multiplayer":
