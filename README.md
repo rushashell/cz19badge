@@ -1,8 +1,25 @@
 # cz19badge
 Project to collaborate on tetris for CZ19
 
-## Thanks
-Special thanks goes to to EWS99 and AbC.
+## Metadata
+Tetris CZ19 with multiplayer modus!
+
+Issues / Pull requests: https://github.com/rushashell/cz19badge
+
+Version 6:
+- Random SSID to support multiple games in a close area
+Version 5:
+- Added multiplayer mode: Survivor or Random lines
+
+Authors:
+- [AbC]ELiT3
+- [AbC]EWS99
+Testers:
+- [AbC]BillsGate
+- [AbC]KlotePino
+- [AbC]Sharky
+- [AbC]Tilq
+- [DeF]Koekie
 
 ## Links
 
