@@ -1,4 +1,4 @@
-APP_NAME="tetris_cz19"
+APP_NAME="tetris_cz19_multiplayer"
 
 import sys
 # We would like to import modules that are added to his folder.
