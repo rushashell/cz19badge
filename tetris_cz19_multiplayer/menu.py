@@ -35,4 +35,4 @@ class TetrisMenu():
     items = ["Survivor","Random lines"]
     choices = ["survivor","randomlines"]
     choice = uinterface.menu(items)
-    return choices[choices]
+    return choices[choice]

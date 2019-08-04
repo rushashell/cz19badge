@@ -8,14 +8,17 @@ import menu
 import tetris
 
 role=""
+hostsettings="survivor"
 
 tetrismenu = menu.TetrisMenu()
 
 mode=tetrismenu.main()
 if mode=="multiplayer":
   role=tetrismenu.multiplayer()
+  if role=="host":
+    hostsettings=tetrismenu.hostsettings()
 
 print(mode,role)
-tetrisgame = tetris.Tetris(mode,role)
+tetrisgame = tetris.Tetris(mode,role,hostsettings)
 tetrisgame.start()
 

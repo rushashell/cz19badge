@@ -8,11 +8,15 @@ import buttons, defines
 
 class Tetris:
 
-    def __init__(self,mode="singleplayer",role="host"):
+    def __init__(self,mode="singleplayer",role="host",hostsettings="survivor"):
         defs = Defs()
         rgb.clear()
+        self.MULTIPLAYER_LINES_SURVIVOR=0
+        self.MULTIPLAYER_LINES_RANDOM=1
         self.mode=mode
         self.role=role
+        self.hostsettings=hostsettings
+        self.multiplayer_lines=self.MULTIPLAYER_LINES_SURVIVOR
         self.font = "fixed_10x20"
         self.board_height = 8
         self.board_width = 32
@@ -111,7 +115,7 @@ class Tetris:
     def btn_a(self, button_is_down):
       if button_is_down:
           self.rotate_piece()
-          #self.add_line()
+          # self.add_line()
           pass
 
     def btn_up(self, button_is_down):
@@ -163,6 +167,14 @@ class Tetris:
       #print("received gameover")
       self.game_won = True
 
+    def multiplayer_on_linesblocked(self):
+      print("setting: lines blocked")
+      self.multiplayer_lines=self.MULTIPLAYER_LINES_SURVIVOR
+    
+    def multiplayer_on_linesrandom(self):
+      print("setting: lines random")
+      self.multiplayer_lines=self.MULTIPLAYER_LINES_RANDOM
+
     def multiplayer_send_line(self):
       if self.role=="host":
         self.host.send_data("row")
@@ -174,6 +186,11 @@ class Tetris:
         self.host.send_data("gameover")
       else:
         self.client.send_data("gameover")
+    def multiplayer_send_settings(self):
+      # Only host can send settings
+      if self.role=="host":
+        data="lines-blocked" if self.multiplayer_lines==self.MULTIPLAYER_LINES_SURVIVOR else "lines-random"
+        self.host.send_data(data)
 
     def network_init(self):
       if self.role=="host":
@@ -211,6 +228,9 @@ class Tetris:
     def start(self):
         if self.mode=="multiplayer":
           self.network_init()
+          if self.role=="host":
+            self.multiplayer_lines=self.MULTIPLAYER_LINES_SURVIVOR if self.hostsettings=="survivor" else self.MULTIPLAYER_LINES_RANDOM
+            self.multiplayer_send_settings()
 
         while True:
           self.game_init()
@@ -402,17 +422,35 @@ class Tetris:
             self.game_step_time = self.game_step_time - self.game_step_speed_increase
 
     def add_line(self):
+        # Move lines up
         for row in range(self.game_height-1):
             for col in range(self.game_width):
                 self.field[row][col] = self.field[row+1][col]
         self.draw()
-        for col in range(self.game_width):
-            self.draw_pixel(self.game_height-1,col,self.game_color_addedline)
-        rgb.frame(self.frame)
-        time.sleep(.5)
-        self.game_blockedlines+=1
-        for col in range(self.game_width):
-            self.field[self.game_height-1][col] = True
+
+        if self.multiplayer_lines == self.MULTIPLAYER_LINES_SURVIVOR:
+          # Temporary draw lines in color "added line" for .5 seconds
+          for col in range(self.game_width):
+              self.draw_pixel(self.game_height-1,col,self.game_color_addedline)
+          rgb.frame(self.frame)
+          time.sleep(.5)
+          # Add the blocked line
+          self.game_blockedlines+=1
+          for col in range(self.game_width):
+              self.field[self.game_height-1][col] = True
+        elif self.multiplayer_lines == self.MULTIPLAYER_LINES_RANDOM:
+          # pick a random hole in the line
+          urandom.seed(time.ticks_ms())
+          random_hole = urandom.getrandbits(8) % self.game_width
+          # Temporary draw lines in color "added line" for .5 seconds
+          for col in range(self.game_width):
+              color=self.game_color_addedline if col != random_hole else self.game_color_background
+              self.draw_pixel(self.game_height-1,col,color)
+          rgb.frame(self.frame)
+          time.sleep(.5)
+          for col in range(self.game_width):
+              self.field[self.game_height-1][col] = col != random_hole
+
         
     def draw(self):
         self.draw_field()
@@ -503,6 +541,10 @@ class Tetris:
         self.multiplayer_on_row()
       elif data == "gameover":
         self.multiplayer_on_gameover()
+      elif data == "lines-blocked":
+        self.multiplayer_on_linesblocked()
+      elif data == "lines-random":
+        self.multiplayer_on_linesrandom()
 
 
 class Defs:
