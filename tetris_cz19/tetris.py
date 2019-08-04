@@ -2,7 +2,6 @@ import time
 import urandom 
 import rgb
 import gameservices
-import tetrisgameservices
 import buttons, defines
 
 # Basic implementation of tetris, adapted to CZ19 badge
