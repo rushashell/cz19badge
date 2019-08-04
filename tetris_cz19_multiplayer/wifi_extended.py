@@ -1,4 +1,4 @@
-import sys, badgehelper
+import sys, badgehelper, time
 
 if badgehelper.on_badge():
   import wifi, network, rgb, uinterface
@@ -31,7 +31,7 @@ def animate_end():
     rgb.clear()
     rgb.framerate(20)
 
-def hotspot_setup(ssid, channel, hidden, password, authmode):
+def hotspot_setup(ssid, channel, hidden, password, authmode, add_postfix=False):
   if not badgehelper.on_badge():
     return False
 
@@ -42,13 +42,17 @@ def hotspot_setup(ssid, channel, hidden, password, authmode):
     sta_if.active(False)
   
   ap_if.active(True)
+
+  if add_postfix:
+    ssid = ssid + "_" + str(time.ticks_ms())
+
   print("Creating HOTSPOT " + ssid + "...")
   animate_wifi()
   ap_if.config(essid=ssid, channel=channel, hidden=hidden, password=password, authmode=authmode)
   animate_end()
   return True 
 
-def hotspot_connect(ssid, password):
+def hotspot_connect(ssid, password, ssid_is_prefix=False):
   if not badgehelper.on_badge():
     return False
 
@@ -61,6 +65,24 @@ def hotspot_connect(ssid, password):
   sta_if.active(True)
 
   if not sta_if.isconnected():
+    if ssid_is_prefix:
+      # we need to scan first to get all latest ssid's
+      ssids=sta_if.scan()
+      ssids_left=[]
+      for ssid_item in ssids:
+        ssid_name = ssid_item[0].decode("ascii")
+        if ssid_name.startswith(ssid):
+          ssids_left.append(ssid_name)
+
+      if len(ssids_left) == 0:
+        animate_no_wifi()
+        animate_end()
+        return False 
+
+      # get latest
+      ssids_left.sort(reverse=True)
+      ssid = ssids_left[0]
+
     print("Connecting to HOTSPOT network " + ssid + "...")
     animate_wifi()
     sta_if.connect(ssid, password)
