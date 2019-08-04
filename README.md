@@ -8,6 +8,7 @@ Issues / Pull requests: https://github.com/rushashell/cz19badge
 
 Version 6:
 - Random SSID to support multiple games in a close area
+
 Version 5:
 - Added multiplayer mode: Survivor or Random lines
 
