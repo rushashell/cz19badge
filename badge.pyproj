@@ -22,19 +22,21 @@
     <Compile Include="clienttest\__init__.py" />
     <Compile Include="packman\packman.py" />
     <Compile Include="packman\__init__.py" />
-    <Compile Include="tetris_cz19\badgehelper.py">
+    <Compile Include="servertest\__init__.py" />
+    <Compile Include="tetris_cz19_multiplayer\badgehelper.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="tetris_cz19\gameservices.py" />
-    <Compile Include="tetris_cz19\menu.py" />
-    <Compile Include="tetris_cz19\tetris.py" />
-    <Compile Include="servertest\__init__.py">
+    <Compile Include="tetris_cz19_multiplayer\gameservices.py" />
+    <Compile Include="tetris_cz19_multiplayer\icon.py" />
+    <Compile Include="tetris_cz19_multiplayer\menu.py" />
+    <Compile Include="tetris_cz19_multiplayer\tetris.py" />
+    <Compile Include="tetris_cz19_multiplayer\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="tetris_cz19\wifi_extended.py">
+    <Compile Include="tetris_cz19_multiplayer\wifi_extended.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="tetris_cz19\__init__.py">
+    <Compile Include="tetris_cz19_multiplayer\__init__.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -44,7 +46,7 @@
   <ItemGroup>
     <Folder Include="clienttest\" />
     <Folder Include="servertest\" />
-    <Folder Include="tetris_cz19\" />
+    <Folder Include="tetris_cz19_multiplayer\" />
     <Folder Include="packman\" />
   </ItemGroup>
   <ItemGroup>
